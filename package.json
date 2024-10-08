@@ -1,20 +1,17 @@
 {
-  "name": "@divineretro/tile",
+  "name": "divineretro",
   "version": "0.0.0",
-  "type": "module",
-  "main": "./index.js",
-  "types": "./index.d.ts",
+  "main": "index.js",
   "scripts": {
-    "build": "rm -rf dist/* && cp package.json dist/package.json && cd ./src && npx tsc && npm run cp-css ",
-    "compile": "npm run cp-css && cd ./src && npx tsc --watch",
-    "cp-css": "cd src && for file in $(find ./ -name '*.css')  \n do \n cp ${file} ../dist/${file} \n done"
+    "init:dr:ascii": "cd ./packages/ascii ; npm run build ; cd ../../ ; npm init -y --scope @divineretro -w ./packages/ascii/dist",
+    "init:dr:tile": "cd ./packages/tile ; npm run build ; cd ../../ ; npm init -y --scope @divineretro -w ./packages/tile/dist"
   },
   "author": "Divine Star Software",
-  "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {},
-  "keywords": [],
-  "license": "ISC",
-  "description": "A library for building retro tile games with babylonjs."
+  "license": "",
+  "workspaces": [
+    "packages/ascii/dist",
+    "packages/tile/dist"
+  ],
+  "dependencies": {},
+  "devDependencies": {}
 }
