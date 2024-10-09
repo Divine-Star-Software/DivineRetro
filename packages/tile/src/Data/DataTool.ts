@@ -10,6 +10,7 @@ export class DataTool {
   world: string = "main";
 
   private _state: number;
+  private _tileState: number;
   private _tileId: number;
   private _textureId: number;
   private _color: number;
@@ -42,6 +43,7 @@ export class DataTool {
     this._layer = layer;
     this._tileIndex = WorldSpaces.getTileIndexXY(this.x, this.y);
     this._tileId = this._layer.tiles[this._tileIndex];
+    this._tileState = this._layer.tileStates[this._tileIndex];
     this._textureId = this._layer.textures[this._tileIndex];
     this._color = this._layer.colors[this._tileIndex];
     this._state = this._layer.states[this._tileIndex];
@@ -50,6 +52,7 @@ export class DataTool {
 
   commit() {
     this._layer.tiles[this._tileIndex] = this._tileId;
+    this._layer.tileStates[this._tileIndex] = this._tileState;
     this._layer.textures[this._tileIndex] = this._textureId;
     this._layer.colors[this._tileIndex] = this._color;
     this._layer.states[this._tileIndex] = this._state;
@@ -68,12 +71,21 @@ export class DataTool {
   setTileId(id: number) {
     this._tileId = id;
   }
+
   getStateData() {
     return this._state;
   }
   setStateData(value: number) {
     this._state = value;
   }
+
+  getTileStateData() {
+    return this._tileState;
+  }
+  setTileStateData(value: number) {
+    this._tileState = value;
+  }
+
   getColorData() {
     return this._color;
   }

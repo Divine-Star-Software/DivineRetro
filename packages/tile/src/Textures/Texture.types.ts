@@ -5,8 +5,3 @@ export type TileTextureData = {
   src: string;
 };
 
-export type EntityTextureData = {
-  id: string;
-  size: Vec2Array;
-  src: string;
-};

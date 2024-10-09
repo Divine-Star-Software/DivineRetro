@@ -1,16 +1,19 @@
 import { TileManager } from "../Tiles/TileManager";
 import { Chunk } from "./Classes/Chunk";
-import { ChunkLayer } from "./Classes/ChunkLayer";
 import { DataTool } from "./DataTool";
 import { WorldDataRegister } from "./WorldDataRegister";
-import { WorldSpaces } from "./WorldSpace";
 import { TileTextureIndex } from "../Textures/TileTextureIndex";
+import { ColorDataEncode } from "./Classes/ColorDataEncode";
+import { TileRoatations } from "Tiles/Tiles.types";
+import { TileStateDataEncode } from "./Classes/TileStateDataEncode";
 
 export class BrushTool {
   x: number;
   y: number;
   layer: number = 0;
   world: string = "main";
+  colorData = new ColorDataEncode();
+  stateData = new TileStateDataEncode();
 
   _dataTool = new DataTool();
 
@@ -18,6 +21,7 @@ export class BrushTool {
   private _textureId: number;
   private _tileId: number;
   private _color: number;
+  private _tileState: number = 0;
 
   setWorld(id: string) {
     this.world = id;
@@ -46,15 +50,17 @@ export class BrushTool {
         chunk.addLayer(this.layer);
       }
 
-      console.warn(chunk, this._dataTool);
       this._dataTool.loadIn();
     }
 
     this._dataTool.setColorData(this._color);
     this._dataTool.setStateData(this._state);
     this._dataTool.setTileId(this._tileId);
+
+    this._dataTool.setTileStateData(this._tileState);
     this._dataTool.setTextureId(this._textureId);
     this._dataTool.commit();
+
     return this;
   }
 
@@ -74,13 +80,21 @@ export class BrushTool {
     return this;
   }
 
+  setRotation(rotation: TileRoatations) {
+    this._tileState = this.stateData
+      .setData(this._tileState)
+      .setRotation(rotation)
+      .getData();
+
+    return this;
+  }
+
   setTileId(id: string) {
     this._tileId = TileManager.tilePalette.getNumberId(id);
     return this;
   }
   setTextureId(id: string, tileX: number, tileY: number) {
     this._textureId = TileTextureIndex.getIndex(id, tileX, tileY);
-    console.log("set texture id",this._textureId,id,tileX,tileY,)
     return this;
   }
 
@@ -88,7 +102,15 @@ export class BrushTool {
     this._state = value;
     return this;
   }
+
   setColorData(r: number = 1, g: number = 1, b: number = 1, a: number = 1) {
-    return this._color;
+    this._color = this.colorData
+      .setData(0)
+      .setColorR(r)
+      .setColorG(g)
+      .setColorB(b)
+      .setColorA(a)
+      .getData();
+    return this;
   }
 }

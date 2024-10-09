@@ -34,7 +34,6 @@ export async function BuildTileTexture(
 
         const tilesX = width / tileWidth;
         const tilesY = height / tileHeight;
-        console.log({ width, height, tilesX, tilesY });
 
         const textureIndex = TileTextureIndex.registerTexture(
           texture.id,
@@ -64,8 +63,6 @@ export async function BuildTileTexture(
   const data = new Uint8ClampedArray(totalLength);
 
   let index = 0;
-
-  console.warn(arrays);
 
   for (let a = 0; a < arrays.length; a++) {
     const array = arrays[a];

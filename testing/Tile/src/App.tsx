@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Engine, Scene } from "@babylonjs/core";
 let init = false;
 import { TextureManager } from "@divineretro/tile/Textures/TextureManager";
@@ -10,9 +10,12 @@ import { BrushTool } from "@divineretro/tile/Data/BrushTool";
 import { DataTool } from "@divineretro/tile/Data/DataTool";
 
 import { WorldDataRegister } from "@divineretro/tile/Data/WorldDataRegister";
+import WorldBuilder from "WorldBuilder/WorldBuilder";
+import { EngienNodes } from "EngineNodes";
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [nodes, setNodes] = useState<EngienNodes | false>(false);
 
   useEffect(() => {
     if (init) return;
@@ -35,6 +38,7 @@ export function App() {
 
       await renderer.create({
         layers: [0],
+
         tileTextures: [
           {
             id: "walls",
@@ -51,49 +55,87 @@ export function App() {
         ],
       });
 
+      const pattern = renderer.createPattern({
+        id: "test",
+        defaultPattern: 0,
+        patterns: {
+          0: [
+            [
+              {
+                texture: "walls",
+                tileX: 0,
+                tileY: 0,
+                rotation:0,
+                color: [15, 15, 15, 15],
+              },
+              {
+                texture: "walls",
+                tileX: 0,
+                tileY: 0,
+                rotation:0,
+                color: [15, 15, 15, 15],
+              },
+            ],
+          ],
+        },
+      });
+
+      let up = true;
+      setInterval(() => {
+        if (pattern.position.y > 128) {
+          up = false;
+        }
+        if (pattern.position.y <= 0) {
+          up = true;
+        }
+        if (up) {
+          pattern.position.y += 1;
+        } else {
+          pattern.position.y -= 1;
+        }
+      }, 10);
+
       const brush = new BrushTool();
-      const dataTool = new DataTool();
 
       for (let x = 0; x < 64; x++) {
         for (let y = 0; y < 32; y++) {
-          brush.setPosition(x, y).setTextureId("walls", 0, 0).paint();
+          if (y % 4 !== 0) continue;
+          brush
+            .setPosition(x, y)
+            .setColorData(15, 0, 0, 15)
+            .setTextureId("walls", 0, 0)
+            .paint();
         }
       }
 
-      console.warn(dataTool.setPosition(34, 2).loadIn());
-      console.warn(
-        WorldDataRegister.worlds,
-        WorldDataRegister.getChunk("main", 48, 0)
-      );
+      const centerX = (-16 + 72) / 2;
+      const centerY = (-16 + 48) / 2;
 
-      // Calculate the center of the box
-      const centerX = (-16 + 72) / 2; // 28
-      const centerY = (-16 + 48) / 2; // 16
+      const radius = 100;
 
-      // Define the radius of the circular path
-      const radius = 100; // Adjust as needed for your scene
-
-      // Initialize the angle
       let angle = 0;
 
-      // Define the speed of rotation (radians per frame)
       const speed = 0.01;
 
-      // Run the render loop
       engine.runRenderLoop(() => {
-        // Update the angle for the next frame
-        angle += speed;
+        //    angle += speed;
 
-        const x = centerX + radius * Math.cos(angle);
-        const y = centerY + radius * Math.sin(angle);
+        //   const x = centerX + radius * Math.cos(angle);
+        //   const y = centerY + radius * Math.sin(angle);
 
-        camera.setPosition(x, y);
+        //   camera.setPosition(x, y);
 
         renderer.render();
         scene.render();
       });
+      setNodes(new EngienNodes(renderer, camera));
     })();
   }, []);
 
-  return <canvas id="render-canvas" ref={canvasRef}></canvas>;
+  return (
+    <div className="main-app">
+      <canvas id="render-canvas" ref={canvasRef}></canvas>
+      {nodes && <WorldBuilder nodes={nodes} />}
+    </div>
+  );
 }

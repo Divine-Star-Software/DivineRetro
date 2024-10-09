@@ -7,10 +7,14 @@ import { TileDataEncode } from "./TileDataEncode";
 import { EngineSettings } from "../../Settings/EngineSettings";
 import { WorldSpaces } from "../../Data/WorldSpace";
 import { DataTool } from "../../Data/DataTool";
+import { ColorDataEncode } from "../../Data/Classes/ColorDataEncode";
+import { TileStateDataEncode } from "../../Data/Classes/TileStateDataEncode";
 
 export class TileLayer {
   private tileData: Uint32Array;
 
+  colorDataEncode = new ColorDataEncode();
+  stataeDataEncode = new TileStateDataEncode();
   tiles: EntityInstance[] = [];
   bufferIndex: Flat2DIndex;
   entityTool: EntityTool;
@@ -32,9 +36,9 @@ export class TileLayer {
     const maxTiles = rows * cols;
     entityTool.setInstanceAmount(maxTiles);
 
-    this.tileData = new Uint32Array(maxTiles);
+    this.tileData = new Uint32Array(maxTiles * 2);
 
-    entityTool.addBuffer("faceData", this.tileData as any, 1);
+    entityTool.addBuffer("tileData", this.tileData as any, 2);
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
         const index = this.bufferIndex.getIndexXY(col, row);
@@ -75,19 +79,31 @@ export class TileLayer {
           .setLayer(this.layerId)
           .loadIn();
         if (!loadIn) {
-          this.tileData[tile.index] = 0;
+          this.tileData[tile.index * 2] = 0;
+          this.tileData[tile.index * 2 + 1] = 0;
+
           continue;
         }
 
-        this.tileData[tile.index] = this.tileDataEncoder
-          .setData(this.tileData[tile.index])
+        this.colorDataEncode.setData(this.dataTool.getColorData());
+
+        this.stataeDataEncode.setData(this.dataTool.getTileStateData());
+
+        this.tileData[tile.index * 2] = this.tileDataEncoder
+          .setData(this.tileData[tile.index * 2])
+          .setColorR(this.colorDataEncode.getColorR())
+          .setColorG(this.colorDataEncode.getColorG())
+          .setColorB(this.colorDataEncode.getColorB())
+          .setColorA(this.colorDataEncode.getColorA())
           .setTexture(this.dataTool.getTextureId())
+          .getData();
+        this.tileData[tile.index * 2 + 1] = this.tileDataEncoder
+          .setData(this.tileData[tile.index * 2 + 1])
+          .setRotation(this.stataeDataEncode.getRotation())
           .getData();
       }
     }
 
     this.entityTool.update();
-    // this.entityTool.mesh.thinInstanceBufferUpdated("matrix");
-    //  this.entityTool.mesh.thinInstanceBufferUpdated("faceData");
   }
 }

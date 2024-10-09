@@ -6,9 +6,12 @@ export class TileTextureIndex {
   private static indexes = new Map<string, Flat2DIndex>([
     ["blank", Flat2DIndex.GetXYOrder()],
   ]);
+
+  
   private static startingIndexes = new Map<string, number>([["blank", 0]]);
+
+
   static registerTexture(id: string, tilesWidth: number, tilesHeight: number) {
-    console.warn("register texture", id, tilesWidth, tilesHeight);
     const index = Flat2DIndex.GetXYOrder();
     this.indexes.set(id, index);
     index.setBounds(tilesWidth, tilesHeight);

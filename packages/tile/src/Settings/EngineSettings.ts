@@ -2,6 +2,7 @@ import { Vec2Array } from "@amodx/math";
 
 export class EngineSettings {
   static pixelSize = 0.001;
+  static maxPatternTiles = 2000;
   static tilePixelSize: Vec2Array = [8, 8];
   static tileMeterSize: Vec2Array = [
     this.tilePixelSize[0] * this.pixelSize,

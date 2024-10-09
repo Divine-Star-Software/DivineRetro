@@ -1,12 +1,17 @@
 /**
  * Tile Data Encoding
+ * // index 1
  * 32 bit number
- * - first 16 bits is the tile texture index
- * - next 16 bits is the color index
- *   - 4 bits r
- *   - 4 bits g
- *   - 4 bits b
- *   - 4 bits a
+ * - upper 16 bits (bits 16-31): Tile Texture Index
+ * - lower 16 bits (bits 0-15): Color Index
+ *   - bits 12-15: Red (R)
+ *   - bits 8-11:  Green (G)
+ *   - bits 4-7:   Blue (B)
+ *   - bits 0-3:   Alpha (A)
+ * // index 2
+ * 32 bit number
+ * - lower 16 bits (bits 0-15): State Index
+ *   - bits 0-3:   Rotation
  */
 export class TileDataEncode {
   private _data = 0;
@@ -21,57 +26,69 @@ export class TileDataEncode {
   }
 
   setTexture(id: number) {
-    // Mask to ensure only the first 16 bits are modified
+    // Texture ID in upper 16 bits
     this._data = (this._data & 0x0000ffff) | ((id & 0xffff) << 16);
     return this;
   }
 
   getTexture(): number {
-    // Extract the first 16 bits (right shift by 16)
+    // Extract the upper 16 bits
     return (this._data >>> 16) & 0xffff;
   }
 
   setColorR(value: number) {
-    // Mask to ensure only the 4 bits for Red channel are modified
-    this._data = (this._data & 0xffffff0f) | ((value & 0xf) << 12);
+    // Correct mask for Red (bits 12-15)
+    this._data = (this._data & 0xffff0fff) | ((value & 0xf) << 12);
     return this;
   }
 
   getColorR(): number {
-    // Extract the 4 bits for Red (bits 12-15)
+    // Extract Red (bits 12-15)
     return (this._data >>> 12) & 0xf;
   }
 
   setColorG(value: number) {
-    // Mask to ensure only the 4 bits for Green channel are modified
+    // Correct mask for Green (bits 8-11)
     this._data = (this._data & 0xfffff0ff) | ((value & 0xf) << 8);
     return this;
   }
 
   getColorG(): number {
-    // Extract the 4 bits for Green (bits 8-11)
+    // Extract Green (bits 8-11)
     return (this._data >>> 8) & 0xf;
   }
 
   setColorB(value: number) {
-    // Mask to ensure only the 4 bits for Blue channel are modified
-    this._data = (this._data & 0xffff0fff) | ((value & 0xf) << 4);
+    // Correct mask for Blue (bits 4-7)
+    this._data = (this._data & 0xffffff0f) | ((value & 0xf) << 4);
     return this;
   }
 
   getColorB(): number {
-    // Extract the 4 bits for Blue (bits 4-7)
+    // Extract Blue (bits 4-7)
     return (this._data >>> 4) & 0xf;
   }
 
   setColorA(value: number) {
-    // Mask to ensure only the 4 bits for Alpha channel are modified
+    // Correct mask for Alpha (bits 0-3)
     this._data = (this._data & 0xfffffff0) | (value & 0xf);
     return this;
   }
 
   getColorA(): number {
-    // Extract the 4 bits for Alpha (bits 0-3)
+    // Extract Alpha (bits 0-3)
+    return this._data & 0xf;
+  }
+
+
+  setRotation(value: number) {
+    // Clear existing rotation bits
+    this._data = (this._data & 0xfffffff0) | (value & 0xf);
+    return this;
+  }
+
+  // Get Rotation (bits 0-3) from Index 2
+  getRotation(): number {
     return this._data & 0xf;
   }
 }
