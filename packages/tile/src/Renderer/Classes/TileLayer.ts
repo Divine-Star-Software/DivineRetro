@@ -1,49 +1,46 @@
 import { Flat2DIndex } from "@amodx/math";
-import { RetroRender } from "../RetroRenderer";
+import { TileRenderer } from "../TileRenderer";
 import { BuildTileGeometry } from "../Functions/BuildTileGeometry";
 import { EntityTool } from "./EntityTool";
 import { EntityInstance } from "./EntityInstance";
 import { TileDataEncode } from "./TileDataEncode";
+import { EngineSettings } from "../../Settings/EngineSettings";
+import { WorldSpaces } from "../../Data/WorldSpace";
+import { DataTool } from "../../Data/DataTool";
 
 export class TileLayer {
   private tileData: Uint32Array;
 
-  tiles: EntityInstance[];
+  tiles: EntityInstance[] = [];
   bufferIndex: Flat2DIndex;
   entityTool: EntityTool;
   tileDataEncoder = new TileDataEncode();
-  constructor(
-    public renderer: RetroRender,
-    public rows: number,
-    public cols: number
-  ) {
-    const mesh = BuildTileGeometry(renderer.scene, renderer.tilesMaterial);
 
+  dataTool = new DataTool();
+  constructor(public renderer: TileRenderer, public layerId: number) {
+    const mesh = BuildTileGeometry(renderer.scene, renderer.tilesMaterial);
+    mesh.alwaysSelectAsActiveMesh = true;
     const entityTool = new EntityTool(mesh);
     this.bufferIndex = Flat2DIndex.GetXYOrder();
-    this.bufferIndex.setBounds(this.rows, this.cols);
 
-    const maxTiles = this.rows * this.cols;
+    const cols = EngineSettings.chunkTileSize[0] + 2;
+
+    const rows = EngineSettings.chunkTileSize[1] + 2;
+
+    this.bufferIndex.setBounds(cols, rows);
+
+    const maxTiles = rows * cols;
     entityTool.setInstanceAmount(maxTiles);
 
     this.tileData = new Uint32Array(maxTiles);
 
     entityTool.addBuffer("faceData", this.tileData as any, 1);
-
-    const pixelSize = 0.001;
-    const meterSize = [8 * pixelSize, 16 * pixelSize];
-
-    const startX = -meterSize[0] * cols;
-    const startZ = 0;
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
-        const index = this.bufferIndex.getIndexXY(row, col);
+        const index = this.bufferIndex.getIndexXY(col, row);
         const entity = entityTool.getInstance()!;
         if (!entity) break;
         this.tiles[index] = entity;
-        entity.position.x = startX + col * meterSize[0];
-        entity.position.y = 0;
-        entity.position.z = startZ - row * meterSize[1];
         entity.scale.setAll(1);
       }
     }
@@ -52,28 +49,45 @@ export class TileLayer {
     this.entityTool = entityTool;
   }
 
-  setTexture(col: number, row: number, texture: number) {
-    const index = this.bufferIndex.getIndexXY(col, row);
-    this.tileData[index] = this.tileDataEncoder
-      .setData(this.tileData[index])
-      .setTexture(texture)
-      .getData();
-  }
-  setColor(
-    col: number,
-    row: number,
-    r: number = 1,
-    g: number = 1,
-    b: number = 1,
-    a: number = 1
-  ) {
-    const index = this.bufferIndex.getIndexXY(col, row);
-    this.tileData[index] = this.tileDataEncoder
-      .setData(this.tileData[index])
-      .setColorR(r)
-      .setColorG(g)
-      .setColorB(b)
-      .setColorA(a)
-      .getData();
+  render() {
+    const meterSize = EngineSettings.tileMeterSize;
+    const cols = EngineSettings.chunkTileSize[0] + 2;
+    const rows = EngineSettings.chunkTileSize[1] + 2;
+
+    const tilePosition = WorldSpaces.getTilePosition(
+      this.renderer.camera.position.x * EngineSettings.pixelSize,
+      this.renderer.camera.position.y * EngineSettings.pixelSize
+    );
+    const tileX = tilePosition.x - 1;
+    const tileY = tilePosition.y - 1;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const tile = this.tiles[this.bufferIndex.getIndexXY(col, row)];
+        if (!tile) continue; // Changed from break to continue to avoid exiting the loop
+
+        tile.position.x = (tileX + col) * meterSize[0];
+        tile.position.y = 0;
+        tile.position.z = (tileY + row) * meterSize[1];
+
+        const loadIn = this.dataTool
+          .setPosition(tileX + col, tileY + row)
+          .setLayer(this.layerId)
+          .loadIn();
+        if (!loadIn) {
+          this.tileData[tile.index] = 0;
+          continue;
+        }
+
+        this.tileData[tile.index] = this.tileDataEncoder
+          .setData(this.tileData[tile.index])
+          .setTexture(this.dataTool.getTextureId())
+          .getData();
+      }
+    }
+
+    this.entityTool.update();
+    // this.entityTool.mesh.thinInstanceBufferUpdated("matrix");
+    //  this.entityTool.mesh.thinInstanceBufferUpdated("faceData");
   }
 }

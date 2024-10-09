@@ -72,7 +72,8 @@ uniform sampler2DArray tileTexture;
 void main() {
 #ifdef INSTANCES
    vec4 color = texture(tileTexture, vec3(vUV, vTextureIndex));
-   FragColor = color * vColor;
+  // FragColor = color * vColor;
+   FragColor = color;
 #endif
 #ifndef INSTANCES
     FragColor = vec4(1.,1.,1.,1.);

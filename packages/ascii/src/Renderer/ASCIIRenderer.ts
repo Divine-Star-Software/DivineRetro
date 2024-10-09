@@ -37,7 +37,7 @@ export class ASCIIRender {
     const meterSize = [8 * pixelSize, 16 * pixelSize];
 
     const startX = -meterSize[0] * cols;
-    const startZ = 0;
+    const startZ = -meterSize[1];
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
         const index = this.bufferIndex.getIndexXY(row, col);
