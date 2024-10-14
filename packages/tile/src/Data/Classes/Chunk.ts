@@ -1,30 +1,49 @@
+import { Vec2Array } from "@amodx/math";
 import { ChunkLayer, ChunkLayerData } from "./ChunkLayer";
 
 export interface ChunkData {
-  layers: ChunkLayerData[];
+  position: Vec2Array;
+  layers: Record<number, ChunkLayerData>;
 }
 
 export class Chunk implements ChunkData {
-  layers: ChunkLayer[];
+  layers: Record<number, ChunkLayer>;
+  position: Vec2Array;
   static Create(data: Partial<ChunkData>): ChunkData {
     return {
       layers: data.layers ? data.layers : [],
+      position: data.position ? data.position : [0, 0],
     };
   }
 
   constructor(data: ChunkData) {
-    this.layers = data.layers.map((_) => new ChunkLayer(_));
+    this.layers = Object.fromEntries(
+      Object.keys(data.layers).map((_) => [
+        _,
+        new ChunkLayer(data.layers[Number(_)]),
+      ])
+    ) as Record<number, ChunkLayer>;
+    this.position = data.position;
   }
 
   addLayer(layer: number) {
-    if (this.layers[layer]) return false;
-    this.layers[layer] = new ChunkLayer(ChunkLayer.Create({}));
+    this.layers[layer] = new ChunkLayer(
+      ChunkLayer.Create({
+        layerId: layer,
+      })
+    );
     return true;
   }
 
   toJSON(): ChunkData {
     return {
-      layers: this.layers.map((_) => _.toJSON()),
+      layers: Object.fromEntries(
+        Object.keys(this.layers).map((_) => [
+          _,
+          this.layers[Number(_)].toJSON(),
+        ])
+      ),
+      position: [...this.position],
     };
   }
 }

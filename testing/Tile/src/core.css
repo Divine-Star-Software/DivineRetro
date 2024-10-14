@@ -17,8 +17,8 @@ body {
   width: 50%;
   height: auto;
   margin: auto;
-  aspect-ratio: 4 / 4;
-  border: 2px solid cyan;
+  aspect-ratio: 16 / 9;
+  padding: 10px;
 }
 
 #root {

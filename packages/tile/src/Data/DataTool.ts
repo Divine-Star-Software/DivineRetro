@@ -1,5 +1,7 @@
+import { RawTileData, TileData } from "Tiles/Tiles.types";
 import { Chunk } from "./Classes/Chunk";
 import { ChunkLayer } from "./Classes/ChunkLayer";
+import { World } from "./Classes/World";
 import { WorldDataRegister } from "./WorldDataRegister";
 import { WorldSpaces } from "./WorldSpace";
 
@@ -7,7 +9,7 @@ export class DataTool {
   x: number;
   y: number;
   layer: number = 0;
-  world: string = "main";
+  worldId: string = "main";
 
   private _state: number;
   private _tileState: number;
@@ -20,7 +22,9 @@ export class DataTool {
   private _chunk: Chunk;
 
   setWorld(id: string) {
-    this.world = id;
+    this.worldId = id;
+
+    WorldDataRegister.setWrold(id)
     return this;
   }
   setPosition(x: number, y: number) {
@@ -35,7 +39,7 @@ export class DataTool {
   }
 
   loadIn() {
-    const chunk = WorldDataRegister.getChunk(this.world, this.x, this.y);
+    const chunk = WorldDataRegister.getChunk(this.x, this.y);
     if (!chunk) return false;
     const layer = chunk.layers[this.layer];
     if (!layer) return false;
@@ -91,5 +95,22 @@ export class DataTool {
   }
   setColorData(value: number) {
     this._color = value;
+  }
+
+  getRawTileData(): RawTileData {
+    return [
+      this._tileId,
+      this._tileState,
+      this._textureId,
+      this._state,
+      this._color,
+    ];
+  }
+  setRawTileData(data: RawTileData) {
+    this._tileId = data[0];
+    this._tileState = data[1];
+    this._textureId = data[2];
+    this._state = data[3];
+    this._color = data[4];
   }
 }

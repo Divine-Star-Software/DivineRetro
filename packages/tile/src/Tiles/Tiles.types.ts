@@ -12,10 +12,20 @@ export type TileData = {
   tileY: number;
   tileX: number;
   rotation: TileRoatations;
+  flipX: boolean;
+  flipY: boolean;
   state?: number;
   tileType?: string;
   color?: Vec4Array;
 };
+
+export type RawTileData = [
+  tileId: number,
+  tileStates: number,
+  textures: number,
+  states: number,
+  colors: number
+];
 
 export type TilePatternData = {
   id: string;

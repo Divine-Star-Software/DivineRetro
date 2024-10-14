@@ -8,6 +8,7 @@ import { EntityInstance } from "./EntityInstance";
 import { TileDataEncode } from "./TileDataEncode";
 import { TileTextureIndex } from "../../Textures/TileTextureIndex";
 import { Vec2Array } from "@amodx/math";
+import { ColorDataEncode } from "../../Data/Classes/ColorDataEncode";
 
 export class TilePattern {
   static entityTool: EntityTool;
@@ -26,11 +27,14 @@ export class TilePattern {
 
   constructor(public renderer: TileRenderer, public data: TilePatternData) {
     if (!TilePattern.entityTool) {
-      const mesh = BuildTileGeometry(renderer.scene, renderer.tilesMaterial);
+      const mesh = BuildTileGeometry(renderer.scene);
       mesh.alwaysSelectAsActiveMesh = true;
+      mesh.material = renderer.tilesMaterial;
       const entityTool = new EntityTool(mesh);
       entityTool.setInstanceAmount(EngineSettings.maxPatternTiles);
-      TilePattern.tileData = new Uint32Array(EngineSettings.maxPatternTiles * 2);
+      TilePattern.tileData = new Uint32Array(
+        EngineSettings.maxPatternTiles * 2
+      );
       TilePattern.entityTool = entityTool;
       entityTool.addBuffer("tileData", TilePattern.tileData as any, 2);
     }
@@ -49,6 +53,7 @@ export class TilePattern {
       }
     } else {
       const tileData = new TileDataEncode();
+      const colorData = new ColorDataEncode();
 
       const patternData: Record<string | number, Vec2Array[][]> = {};
       let totalTiles = 0;
@@ -65,10 +70,7 @@ export class TilePattern {
             encodedData[i][k] = [
               tileData
                 .setData(0)
-                .setColorR(patData.color ? patData.color[0] : 1)
-                .setColorG(patData.color ? patData.color[1] : 1)
-                .setColorB(patData.color ? patData.color[2] : 1)
-                .setColorA(patData.color ? patData.color[3] : 1)
+                .setRotation(patData.rotation)
                 .setTexture(
                   TileTextureIndex.getIndex(
                     patData.texture,
@@ -77,7 +79,13 @@ export class TilePattern {
                   )
                 )
                 .getData(),
-              tileData.setData(0).setRotation(patData.rotation).getData(),
+              colorData
+                .setData(0)
+                .setColorR(patData.color ? patData.color[0] : 1)
+                .setColorG(patData.color ? patData.color[1] : 1)
+                .setColorB(patData.color ? patData.color[2] : 1)
+                .setColorA(patData.color ? patData.color[3] : 1)
+                .getData(),
             ];
             if (patData) {
               tiles++;
@@ -117,13 +125,14 @@ export class TilePattern {
       for (let k = 0; k < patternData[i].length; k++) {
         const tile = this.tiles[tileIndex];
         if (!tile) continue;
-
-        tile.position.x =
+        tile.matrix.setPosition(
           this.position.x * EngineSettings.pixelSize +
-          k * EngineSettings.tileMeterSize[0];
-        tile.position.z =
+            k * EngineSettings.tileMeterSize[0],
           this.position.y * EngineSettings.pixelSize +
-          i * EngineSettings.tileMeterSize[1];
+            i * EngineSettings.tileMeterSize[1],
+          0
+        );
+
         TilePattern.tileData[tile.index * 2] = patternData[i][k][0];
         TilePattern.tileData[tile.index * 2 + 1] = patternData[i][k][1];
         tileIndex++;

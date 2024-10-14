@@ -1,4 +1,9 @@
-import type { RawTexture2DArray, Scene } from "@babylonjs/core";
+import {
+  Vector2,
+  type RawTexture2DArray,
+  type Scene,
+  type Texture,
+} from "@babylonjs/core";
 import { ShaderMaterial } from "@babylonjs/core/Materials/shaderMaterial";
 import { Effect } from "@babylonjs/core/Materials/effect";
 
@@ -8,12 +13,16 @@ precision highp float;
 // Attributes
 in vec3 position;
 in vec3 normal;
-
 in vec2 uv;
-// Uniforms
 
+
+// Uniforms
 uniform mat4 worldViewProjection;                
 uniform mat4 viewProjection;   
+uniform vec2 tileUVDimenions;
+uniform vec2 tileTextureTileBounds;
+
+uniform float time;
 
 
 #ifdef INSTANCES
@@ -28,35 +37,63 @@ in uvec2 tileData;
 
 // Varying
 out vec2 vUV;
-out float vTextureIndex;
 out vec4 vColor;
 
 void main(void) {
     #ifdef INSTANCES
       // Construct the final world matrix
       mat4 finalWorld = mat4(world0, world1, world2, world3); 
-      // Unpack tileData
-      vTextureIndex = float((tileData.x >> 16u) & 0xFFFFu);
+   
+
+
 
       // Extract the color components (lower 16 bits)
-      float r = float((tileData.x >> 12u) & 0xFu) / 15.0;
-      float g = float((tileData.x >> 8u) & 0xFu) / 15.0;
-      float b = float((tileData.x >> 4u) & 0xFu) / 15.0;
-      float a = float(tileData.x & 0xFu) / 15.0;
+      float r = float((tileData.y >> 24u) & 0xFFu) / 255.0;
+      float g = float((tileData.y >> 16u) & 0xFFu) / 255.0;
+      float b = float((tileData.y >> 8u) & 0xFFu) / 255.0;
+      float a = float(tileData.y & 0xFFu) / 255.0;
 
-
-
-
-      uint rotationIndex = tileData.y & 3u;
-
-
-      // Create a mask with a 1 at the desired bit position
+      uint rotationIndex = (tileData.x >> 0u) & 0xFu;  // bits 0-3
+      uint flipVertical = (tileData.x >> 4u) & 0x1u;  // bit 4
+      uint flipHorizontal = (tileData.x >> 5u) & 0x1u;  // bit 5
+      uint blendMode = (tileData.x >> 6u) & 0x7u;  // bits 6-8
+     
       uint mask = 1u << rotationIndex;
 
-      // Extract the bit by masking and shifting
       float uvX = float( (uint(uv.x) & mask ) >> rotationIndex );
       float uvY = float( (uint(uv.y) & mask ) >> rotationIndex );
-      vUV = vec2(uvX,uvY);
+      vec2 uvAdjusted = vec2(uvX,uvY);
+
+      // Apply horizontal and vertical flips
+      if (flipHorizontal == 1u) {
+         uvAdjusted.x = 1.0 - uvAdjusted.x;
+      }
+      if (flipVertical == 1u) {
+          uvAdjusted.y = 1.0 - uvAdjusted.y;
+      }
+
+      float tileIndex = float((tileData.x >> 16u) & 0xFFFFu);
+
+      if(tileIndex == 0.) {
+        vColor.a = 0.;
+        return;
+      }
+      tileIndex -= 1.;
+
+
+      
+
+      vec2 tilePosition = vec2(
+        mod(tileIndex, tileTextureTileBounds.x),
+        floor(tileIndex / tileTextureTileBounds.x)
+      );
+ // vec2 tilePosition = vec2(0.,0.);
+
+
+    uvAdjusted = uvAdjusted * tileUVDimenions + tilePosition * tileUVDimenions;
+
+
+    vUV = uvAdjusted;
 
 
 
@@ -64,6 +101,7 @@ void main(void) {
 
       // Pack the RGBA color into vColor
       vColor = vec4(r, g, b, a);
+    //vColor = vec4(1.,1.,1.,1.);
       gl_Position = viewProjection * finalWorld * vec4(position, 1.0);  
     #else
       gl_Position = worldViewProjection * vec4(position, 1.0); 
@@ -78,19 +116,24 @@ void main(void) {
 Effect.ShadersStore["retroFragmentShader"] = /* glsl  */ `
 #version 300 es
 precision highp float;
-precision highp sampler2DArray;
+precision highp sampler2D;
 out vec4 FragColor;
 in vec2 vUV;
 in float vTextureIndex;
 in vec4 vColor;
 
-uniform sampler2DArray tileTexture;
+uniform sampler2D tileTexture;
 
 void main() {
 #ifdef INSTANCES
-vec4 texColor = texture(tileTexture, vec3(vUV, vTextureIndex));
-    // Apply tint by multiplying RGB and handling alpha appropriately
-    FragColor = texColor * vColor;
+   vec4 texColor = texture(tileTexture, vec2(vUV));
+   FragColor = texColor * vColor;
+   if(texColor.a < .2) {
+
+    discard;
+   }
+ //  FragColor = texColor;
+// FragColor = vec4(1.);
 #endif
 #ifndef INSTANCES
     FragColor = vec4(1.,1.,1.,1.);
@@ -101,7 +144,9 @@ vec4 texColor = texture(tileTexture, vec3(vUV, vTextureIndex));
 
 export function BuildTileMaterial(
   scene: Scene,
-  tileTexture: RawTexture2DArray
+  tileTexture: Texture,
+  tileUVDimenions: Vector2,
+  tileTextureTileBounds: Vector2
 ) {
   const material = new ShaderMaterial(
     "shader",
@@ -122,17 +167,28 @@ export function BuildTileMaterial(
         "world3",
       ],
       uniforms: [
+        "time",
         "viewProjection",
         "worldViewProjection",
-        "retroColors",
-        "retroBrightColors",
+        "tileUVDimenions",
+        "tileTextureTileBounds",
       ],
       samplers: ["tileTexture"],
-      needAlphaBlending:true,
-      needAlphaTesting:true
+      needAlphaBlending: true,
+      needAlphaTesting: true,
     }
   );
+
+  let time = 0;
+  scene.registerBeforeRender(() => {
+    material.setFloat("time", time);
+    time += 1;
+  });
   material.setTexture("tileTexture", tileTexture);
+
+  console.log(tileUVDimenions);
+  material.setVector2("tileUVDimenions", tileUVDimenions);
+  material.setVector2("tileTextureTileBounds", tileTextureTileBounds);
 
   return material;
 }

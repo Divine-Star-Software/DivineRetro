@@ -1,27 +1,64 @@
-import { Flat2DIndex, Flat3DIndex } from "@amodx/math";
+import { Flat2DIndex, Flat3DIndex, Vec2Array } from "@amodx/math";
+import { TileTextureIndexDAta as TileIndexData } from "./Texture.types";
+import { TextureAnimations } from "./TextureAnimations";
 
 export class TileTextureIndex {
   private static tilesCount = 1;
 
-  private static indexes = new Map<string, Flat2DIndex>([
-    ["blank", Flat2DIndex.GetXYOrder()],
-  ]);
+  static index = Flat2DIndex.GetXYOrder();
+  static _bounds = new Map<string, [start: Vec2Array, end: Vec2Array]>();
 
-  
-  private static startingIndexes = new Map<string, number>([["blank", 0]]);
+  static getIndexData(): TileIndexData {
+    const bounds: TileIndexData["mapped"] = {};
 
+    for (const [id, indexes] of this._bounds) {
+      bounds[id] = this._bounds.get(id)!;
+    }
 
-  static registerTexture(id: string, tilesWidth: number, tilesHeight: number) {
-    const index = Flat2DIndex.GetXYOrder();
-    this.indexes.set(id, index);
-    index.setBounds(tilesWidth, tilesHeight);
-    this.startingIndexes.set(id, this.tilesCount);
-    this.tilesCount += index.size;
-    return index;
+    return {
+      textureBounds: this.index.getBounds(),
+      mapped: bounds,
+    };
   }
 
+  static setTextureTileBounds(x: number, y: number) {
+    this.index.setBounds(x, y);
+  }
+
+  static registerTexture(
+    id: string,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ) {
+    this._bounds.set(id, [
+      [startX, startY],
+      [endX, endY],
+    ]);
+  }
   static getIndex(id: string, tileX: number, tileY: number) {
-    const index = this.indexes.get(id)!;
-    return this.startingIndexes.get(id)! + index.getIndexXY(tileX, tileY);
+    if (id == "blank") return 0;
+    const start = this._bounds.get(id)![0];
+
+    return this.index.getIndexXY(start[0] + tileX, start[1] + tileY) + 1;
+  }
+  static isAnimated(index: number) {
+    if(index == 0) return;
+    return TextureAnimations.animatedIndex[index - 1] !== undefined;
+  }
+
+  static getAnimatedIndex(index: number) {
+    const anim = TextureAnimations.animatedIndex[index - 1];
+    if (!anim) return index;
+
+    const indexPos = this.index.getXY(index - 1);
+
+    return (
+      this.index.getIndexXY(
+        indexPos[0] + anim.animatedFrameOffset[0],
+        indexPos[1] + anim.animatedFrameOffset[1]
+      ) + 1
+    );
   }
 }

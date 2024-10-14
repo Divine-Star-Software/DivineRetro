@@ -1,89 +1,101 @@
-import { RawTexture2DArray } from "@babylonjs/core/Materials/Textures/rawTexture2DArray";
 import { Scene } from "@babylonjs/core/scene";
-import { Constants } from "@babylonjs/core/Engines/constants";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { TileTextureData } from "../../Textures/Texture.types";
+import { Vec2Array } from "@amodx/math";
+import { Vector2 } from "@babylonjs/core";
 import { TileTextureIndex } from "../../Textures/TileTextureIndex";
 import { EngineSettings } from "../../Settings/EngineSettings";
 
 export async function BuildTileTexture(
   scene: Scene,
+  tileSetSize: Vec2Array,
   textures: TileTextureData[]
-): Promise<RawTexture2DArray> {
-  const tileWidth = EngineSettings.tilePixelSize[0];
-  const tileHeight = EngineSettings.tilePixelSize[1];
-  const arrays: Uint8ClampedArray[] = [
-    new Uint8ClampedArray(tileWidth * tileHeight * 4),
-  ];
-
+) {
   const canvas = document.createElement("canvas");
-
-  let totalLength = tileWidth * tileHeight * 4;
   const context = canvas.getContext("2d")!;
 
-  for (const texture of textures) {
-    await new Promise(async (resolve) => {
-      const image = new Image();
-      image.onload = () => {
-        const width = image.width;
-        const height = image.height;
-        canvas.width = width;
-        canvas.height = height;
-        context.clearRect(0, 0, width, height);
-        context.drawImage(image, 0, 0, width!, height!);
+  const columns = Math.ceil(Math.sqrt(textures.length));
+  const rows = Math.ceil(textures.length / columns);
 
-        const tilesX = width / tileWidth;
-        const tilesY = height / tileHeight;
+  const imageWidth = columns * tileSetSize[0];
+  const imageHeight = rows * tileSetSize[1];
+  canvas.width = imageWidth;
+  canvas.height = imageHeight;
+  TileTextureIndex.setTextureTileBounds(
+    imageWidth / EngineSettings.tilePixelSize[0],
+    imageHeight / EngineSettings.tilePixelSize[1]
+  );
+  console.warn(imageWidth, imageHeight, textures);
+  for (let imageY = 0; imageY < imageHeight; imageY += tileSetSize[1]) {
+    let done = false;
+    for (let imageX = 0; imageX < imageWidth; imageX += tileSetSize[0]) {
+      const texture = textures.shift()!;
+      if (!texture) {
+        done = true;
+        break;
+      }
 
-        const textureIndex = TileTextureIndex.registerTexture(
-          texture.id,
-          tilesX,
-          tilesY
-        );
-        const startingIndex = arrays.length;
+      await new Promise(async (resolve) => {
+        const image = new Image();
+        image.onload = () => {
+       //   context.clearRect(imageX, imageY, tileSetSize[0], tileSetSize[1]);
+          context.save();
+          context.translate(0, canvas.height);
+          context.scale(1, -1);
 
-        for (let x = 0; x < width; x += tileWidth) {
-          for (let y = 0; y < height; y += tileHeight) {
-            const data = context.getImageData(x, y, tileWidth, tileHeight);
 
-            arrays[
-              startingIndex +
-                textureIndex.getIndexXY(x / tileWidth, y / tileHeight)
-            ] = data.data;
-            totalLength += data.data.length;
-          }
-        }
+   
+          context.drawImage(
+            image,
+            imageX,
+            imageY,
+         //   -(imageY + tileSetSize[1]),
+            tileSetSize[0],
+            tileSetSize[1]
+          );
 
-        resolve(true);
-      };
-      image.src = texture.src;
-    });
-  }
+          context.restore();
 
-  const data = new Uint8ClampedArray(totalLength);
-
-  let index = 0;
-
-  for (let a = 0; a < arrays.length; a++) {
-    const array = arrays[a];
-    for (let i = 0; i < array.length; i++) {
-      data[index + i] = array[i];
+          TileTextureIndex.registerTexture(
+            texture.id,
+            imageX / EngineSettings.tilePixelSize[0],
+            imageY / EngineSettings.tilePixelSize[1],
+            (imageX + tileSetSize[0]) / EngineSettings.tilePixelSize[0],
+            (imageY + tileSetSize[1]) / EngineSettings.tilePixelSize[1]
+          );
+          console.warn("register texture", texture.id);
+          resolve(true);
+        };
+        image.src = texture.src;
+      });
     }
-    index += array.length;
+    if (done) break;
   }
-
-  const texture = new RawTexture2DArray(
-    data,
-    tileWidth,
-    tileHeight,
-    arrays.length,
-    Constants.TEXTUREFORMAT_RGBA,
-    scene,
-    false,
-    false,
-    Texture.NEAREST_SAMPLINGMODE,
-    Constants.TEXTURETYPE_UNSIGNED_BYTE
+  const tileUVDimenions = new Vector2(
+    EngineSettings.tilePixelSize[0] / imageWidth,
+    EngineSettings.tilePixelSize[1] / imageHeight
+  );
+  const tileTextureTileBounds = new Vector2(
+    imageWidth / EngineSettings.tilePixelSize[0],
+    imageHeight / EngineSettings.tilePixelSize[1]
   );
 
-  return texture;
+  console.log(tileUVDimenions, tileTextureTileBounds);
+
+  const imageBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error("Tile texture could not be created."));
+      resolve(blob);
+    }, "image/png");
+  });
+
+  const texture = new Texture(
+    URL.createObjectURL(imageBlob),
+    scene,
+    undefined,
+    undefined,
+    Texture.NEAREST_NEAREST
+  );
+
+  return [texture, tileUVDimenions, tileTextureTileBounds] as const;
 }

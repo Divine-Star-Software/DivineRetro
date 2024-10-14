@@ -4,8 +4,9 @@ import { DataTool } from "./DataTool";
 import { WorldDataRegister } from "./WorldDataRegister";
 import { TileTextureIndex } from "../Textures/TileTextureIndex";
 import { ColorDataEncode } from "./Classes/ColorDataEncode";
-import { TileRoatations } from "Tiles/Tiles.types";
+import { RawTileData, TileRoatations } from "../Tiles/Tiles.types";
 import { TileStateDataEncode } from "./Classes/TileStateDataEncode";
+import { WorldSpaces } from "./WorldSpace";
 
 export class BrushTool {
   x: number;
@@ -25,6 +26,7 @@ export class BrushTool {
 
   setWorld(id: string) {
     this.world = id;
+    WorldDataRegister.setWrold(id);
     return this;
   }
   setPosition(x: number, y: number) {
@@ -33,7 +35,13 @@ export class BrushTool {
     return this;
   }
 
-  paint() {
+  paintRaw(raw: RawTileData) {
+    this._getOrAddChunk();
+    this._dataTool.setRawTileData(raw);
+    this._dataTool.commit();
+  }
+
+  private _getOrAddChunk() {
     if (
       !this._dataTool
         .setWorld(this.world)
@@ -41,9 +49,15 @@ export class BrushTool {
         .setLayer(this.layer)
         .loadIn()
     ) {
-      let chunk = WorldDataRegister.getChunk(this.world, this.x, this.y);
+      let chunk = WorldDataRegister.getChunk(this.x, this.y);
       if (!chunk) {
-        chunk = new Chunk(Chunk.Create({}));
+        const chunkPos = WorldSpaces.getChunkPositionXY(this.x, this.y);
+        console.log(chunkPos.x, chunkPos.y, this.x, this.y);
+        chunk = new Chunk(
+          Chunk.Create({
+            position: [chunkPos.x, chunkPos.y],
+          })
+        );
         chunk.addLayer(this.layer);
         WorldDataRegister.setChunk(this.world, this.x, this.y, chunk);
       } else {
@@ -52,7 +66,9 @@ export class BrushTool {
 
       this._dataTool.loadIn();
     }
-
+  }
+  paint() {
+    this._getOrAddChunk();
     this._dataTool.setColorData(this._color);
     this._dataTool.setStateData(this._state);
     this._dataTool.setTileId(this._tileId);
@@ -89,6 +105,20 @@ export class BrushTool {
     return this;
   }
 
+  setFlipX(flipX: boolean) {
+    this._tileState = this.stateData
+      .setData(this._tileState)
+      .setFlipHorizontal(flipX)
+      .getData();
+    return this;
+  }
+  setFlipY(flipY: boolean) {
+    this._tileState = this.stateData
+      .setData(this._tileState)
+      .setFlipVertical(flipY)
+      .getData();
+    return this;
+  }
   setTileId(id: string) {
     this._tileId = TileManager.tilePalette.getNumberId(id);
     return this;
@@ -103,7 +133,12 @@ export class BrushTool {
     return this;
   }
 
-  setColorData(r: number = 1, g: number = 1, b: number = 1, a: number = 1) {
+  setColorData(
+    r: number = 255,
+    g: number = 255,
+    b: number = 255,
+    a: number = 255
+  ) {
     this._color = this.colorData
       .setData(0)
       .setColorR(r)
