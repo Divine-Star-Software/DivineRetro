@@ -11,6 +11,7 @@ import { StyleCharEncode } from "./Classes/StyleCharEncode";
 
 export class ASCIIRender {
   bufferIndex: Flat2DIndex;
+  textureIndex: Flat2DIndex;
   charTiles: EntityInstance[] = [];
 
   entityTool: EntityTool;
@@ -24,7 +25,9 @@ export class ASCIIRender {
     const entityTool = BuildASCIIGeometry(scene, material);
 
     this.bufferIndex = Flat2DIndex.GetXYOrder();
-    this.bufferIndex.setBounds(this.rows, this.cols);
+    this.bufferIndex.setBounds(this.cols, this.rows);
+    this.textureIndex = Flat2DIndex.GetXYOrder();
+    this.textureIndex.setBounds(16, 16);
 
     const maxTiles = this.rows * this.cols;
     entityTool.setInstanceAmount(maxTiles);
@@ -36,18 +39,17 @@ export class ASCIIRender {
     const pixelSize = 0.001;
     const meterSize = [8 * pixelSize, 16 * pixelSize];
 
-    const startX = -meterSize[0] * cols;
-    const startZ = -meterSize[1];
+    const startX = cols * meterSize[0];
+    const startY = rows * meterSize[1];
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
-        const index = this.bufferIndex.getIndexXY(row, col);
+        const index = this.bufferIndex.getIndexXY(col, row);
         const entity = entityTool.getInstance()!;
         if (!entity) break;
         this.charTiles[index] = entity;
-        entity.position.x = startX + col * meterSize[0];
-        entity.position.y = 0;
-        entity.position.z = startZ - row * meterSize[1];
-        entity.scale.setAll(1);
+        entity.matrix.positionX = startX - col * meterSize[0];
+        entity.matrix.positionY = startY - row * meterSize[1];
+        entity.matrix.positionZ = 0;
       }
     }
 
@@ -76,7 +78,7 @@ export class ASCIIRender {
         col = column;
         continue;
       }
-      const index = this.bufferIndex.getIndexXY(row, col);
+      const index = this.bufferIndex.getIndexXY(col, row);
       if (this.styleCharEncode.isStyleChar(char)) {
         this.styleCharEncode.setChar(char);
         this.charDataEncode
@@ -88,24 +90,8 @@ export class ASCIIRender {
 
         continue;
       }
-      /*     if (this.charDataEncode.isBold()) {
-        t.setData(   this.charDataEncode
-          .setChar(ASCIIMapping.getCharCodeAt(char))
-          .getData())
-        console.log(
-          char,
-      //   this.styleCharEncode.isDim(),
-      //    this.styleCharEncode.isBold(),
-          this.charDataEncode.isDim(),
-          this.charDataEncode.isBold(),
-t.isBold()
-        );
-      } */
-      /*   t.setData(this.charDataEncode.getData());
-        if(t.isBold()) {
-          console.log(t.getData())
-        } */
-      this.charData[index] = this.charDataEncode
+
+      this.charData[this.charTiles[index].index] = this.charDataEncode
         .setChar(ASCIIMapping.getCharCodeAt(char))
         .getData();
 
@@ -113,13 +99,5 @@ t.isBold()
     }
     this.charDataEncode.setData(0);
     return this;
-  }
-
-  setCharAt(charCode: number, row: number, column: number) {
-    const index = this.bufferIndex.getIndexXY(row, column);
-    this.charData[index] = this.charDataEncode
-      .setData(this.charData[index])
-      .setChar(charCode)
-      .getData();
   }
 }

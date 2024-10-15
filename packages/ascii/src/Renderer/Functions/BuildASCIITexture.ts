@@ -1,21 +1,21 @@
-import { RawTexture2DArray } from "@babylonjs/core/Materials/Textures/rawTexture2DArray";
 import { Scene } from "@babylonjs/core/scene";
-import { Constants } from "@babylonjs/core/Engines/constants";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { ASCIIMapping } from "../ASCIIMapping";
+import { Flat2DIndex } from "@amodx/math";
 
-export function BuildASCIITexture(scene: Scene): RawTexture2DArray {
+export function BuildASCIITexture(scene: Scene): Texture {
   const numChars = 256;
-  const charWidth = 16;
-  const charHeight = 32;
-
-  const totalDataSize = numChars * charWidth * charHeight * 4; // RGBA
-
-  const data = new Uint8Array(totalDataSize);
+  const charWidth = 8;
+  const charHeight = 16;
+  const textureCharWidth = 16;
+  const textureCharHeight = 16;
+  const padding = 4; // Add 4-pixel padding
+  const cellWidth = charWidth + padding * 2;
+  const cellHeight = charHeight + padding * 2;
 
   const canvas = document.createElement("canvas");
-  canvas.width = charWidth;
-  canvas.height = charHeight;
+  canvas.width = cellWidth * textureCharWidth;
+  canvas.height = cellHeight * textureCharHeight;
 
   const context = canvas.getContext("2d");
 
@@ -23,37 +23,33 @@ export function BuildASCIITexture(scene: Scene): RawTexture2DArray {
     throw new Error("Failed to get 2D context");
   }
 
+  const index = Flat2DIndex.GetXYOrder();
+  index.setBounds(16, 16);
+
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.font = `${
-    charHeight 
-  }px monospace`;
+  context.font = `${charHeight}px monospace`;
+  context.translate(0, canvas.height);
+  context.scale(1, -1);
 
   for (let i = 0; i < numChars; i++) {
-    context.clearRect(0, 0, charWidth, charHeight);
-
+    const [x, y] = index.getXY(i);
     const char = ASCIIMapping.getCharFromCode(i);
-    context.clearRect(0, 0, charWidth, charHeight);
+
     context.fillStyle = "white";
-    context.fillText(char, charWidth / 2, charHeight / 2);
-
-    const imageData = context.getImageData(0, 0, charWidth, charHeight);
-
-    const offset = i * charWidth * charHeight * 4;
-    data.set(imageData.data, offset);
+    context.fillText(
+      char,
+      x * cellWidth + padding + charWidth / 2,
+      y * cellHeight + padding + charHeight / 2
+    );
   }
 
-  const texture = new RawTexture2DArray(
-    data,
-    charWidth,
-    charHeight,
-    numChars, // depth
-    Constants.TEXTUREFORMAT_RGBA,
+  const texture = new Texture(
+    canvas.toDataURL("image/png"),
     scene,
-    false, // generateMipMaps
-    false, // invertY
-    Texture.NEAREST_SAMPLINGMODE,
-    Constants.TEXTURETYPE_UNSIGNED_BYTE
+    undefined,
+    undefined,
+    Texture.NEAREST_NEAREST
   );
 
   return texture;

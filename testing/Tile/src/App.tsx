@@ -286,7 +286,7 @@ export const ParticleTexture =
       const emitter = new Vector3();
       particleSystem.emitter = emitter;
       engine.runRenderLoop(() => {
-        console.log(engine.getFps())
+      //  console.log(engine.getFps())
         //    angle += speed;
 
         //   const x = centerX + radius * Math.cos(angle);

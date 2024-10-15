@@ -87,8 +87,6 @@ void main(void) {
         mod(tileIndex, tileTextureTileBounds.x),
         floor(tileIndex / tileTextureTileBounds.x)
       );
- // vec2 tilePosition = vec2(0.,0.);
-
 
     uvAdjusted = uvAdjusted * tileUVDimenions + tilePosition * tileUVDimenions;
 
@@ -186,9 +184,10 @@ export function BuildTileMaterial(
   });
   material.setTexture("tileTexture", tileTexture);
 
-  console.log(tileUVDimenions);
+
   material.setVector2("tileUVDimenions", tileUVDimenions);
   material.setVector2("tileTextureTileBounds", tileTextureTileBounds);
 
+ // material.wireframe = true;
   return material;
 }

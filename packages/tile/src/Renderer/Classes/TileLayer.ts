@@ -114,14 +114,14 @@ export class TileLayer {
         );
 
         const loadIn = this.dataTool
-          .setPosition(
-            !this.worldDataClamp
-              ? tileX + col
-              : (tileX + col) % this.worldDataClamp,
-            !this.worldDataClamp
-              ? tileY + row
-              : (tileY + row) % this.worldDataClamp
-          )
+        .setPosition(
+          !this.worldDataClamp
+            ? tileX + col
+            : mod(tileX + col, this.worldDataClamp),
+          !this.worldDataClamp
+            ? tileY + row
+            : mod(tileY + row, this.worldDataClamp)
+        )
           .setLayer(this.worldLayer)
           .loadIn();
         if (!loadIn) {
@@ -159,4 +159,8 @@ export class TileLayer {
 
     this.entityTool.update();
   }
+}
+
+function mod(n: number, m: number): number {
+  return ((n % m) + m) % m;
 }

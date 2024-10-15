@@ -49,7 +49,6 @@ export async function BuildTileTexture(
             image,
             imageX,
             imageY,
-         //   -(imageY + tileSetSize[1]),
             tileSetSize[0],
             tileSetSize[1]
           );

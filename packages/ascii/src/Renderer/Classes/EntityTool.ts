@@ -17,8 +17,7 @@ export class EntityTool {
 
   setInstanceAmount(amount: number) {
     this._matrixArray = new MatrixArray(amount);
-    this.addBuffer("matrix", this._matrixArray.matricies, 16);
-
+    this.addBuffer("matrix", this._matrixArray.matrices, 16);
     this._instanceAmount = amount;
     let i = this._instanceAmount;
     while (i--) {
@@ -36,16 +35,16 @@ export class EntityTool {
   getInstance() {
     const instance = this._instances.shift();
     if (!instance) return false;
-    instance.scale.setAll(1);
-    instance.position.setAll(0);
+    instance.matrix.setScale(1, 1, 1);
+    instance.matrix.setPosition(0, 0, 0);
 
     this._usedInstances.add(instance);
     return instance;
   }
 
   returnInstance(instance: EntityInstance) {
-    instance.scale.setAll(0);
-    instance.position.setAll(0);
+    instance.matrix.setScale(0, 0, 0);
+    instance.matrix.setPosition(0, 0, 0);
 
     this._instances.push(instance);
     this._usedInstances.delete(instance);
